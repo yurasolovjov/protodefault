@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package example.basic.v1;
+
+import "defaults/v1/options.proto";
+
+option go_package = "github.com/yurasolovjov/protodefault/example/basic/proto;basicpb";
+
+// Config демонстрирует базовое использование default_value для скалярных типов.
+message Config {
+  // Хост сервера. По умолчанию localhost.
+  string host = 1 [(defaults.v1.default_value) = "localhost"];
+  
+  // Порт сервера. По умолчанию 8080.
+  int32 port = 2 [(defaults.v1.default_value) = "8080"];
+  
+  // Включить режим отладки. По умолчанию false.
+  bool debug = 3 [(defaults.v1.default_value) = "false"];
+  
+  // Таймаут в секундах. По умолчанию 30.
+  int32 timeout_seconds = 4 [(defaults.v1.default_value) = "30"];
+  
+  // Максимальное количество соединений. По умолчанию 100.
+  int32 max_connections = 5 [(defaults.v1.default_value) = "100"];
+}

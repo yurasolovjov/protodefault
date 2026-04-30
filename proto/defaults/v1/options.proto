@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package defaults.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/yurasolovjov/protodefault/proto/defaults/v1;defaultsv1";
+
+extend google.protobuf.FieldOptions {
+  string default_value = 50001;
+}

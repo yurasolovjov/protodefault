@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package test.v1;
+
+import "defaults/v1/options.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/field_mask.proto";
+
+option go_package = "github.com/yurasolovjov/protodefault/proto/test/v1;testv1";
+
+enum LogLevel {
+  LOG_LEVEL_UNSPECIFIED = 0;
+  LOG_LEVEL_DEBUG = 1;
+  LOG_LEVEL_INFO = 2;
+  LOG_LEVEL_WARN = 3;
+}
+
+message FeatureFlag {
+  string name = 1 [(defaults.v1.default_value) = "unknown"];
+  bool enabled = 2 [(defaults.v1.default_value) = "true"];
+}
+
+message TestMessage {
+  // Scalars
+  string str_field = 1 [(defaults.v1.default_value) = "default string"];
+  int32 int32_field = 2 [(defaults.v1.default_value) = "42"];
+  uint64 uint64_field = 3 [(defaults.v1.default_value) = "100500"];
+  double double_field = 4 [(defaults.v1.default_value) = "3.14"];
+  bool bool_field = 5 [(defaults.v1.default_value) = "true"];
+  bytes bytes_field = 6 [(defaults.v1.default_value) = "hello"];
+  
+  // Optional scalars (proto3 presence)
+  optional string opt_str_field = 7 [(defaults.v1.default_value) = "optional default"];
+  optional int32 opt_int32_field = 8 [(defaults.v1.default_value) = "-1"];
+
+  // Enum
+  LogLevel level_by_name = 9 [(defaults.v1.default_value) = "LOG_LEVEL_INFO"];
+  LogLevel level_by_number = 10 [(defaults.v1.default_value) = "3"];
+
+  // Nested message
+  FeatureFlag feature = 11;
+  
+  // Repeated
+  repeated string tags = 12 [(defaults.v1.default_value) = "[\"tag1\", \"tag2\"]"];
+  repeated FeatureFlag features = 13 [(defaults.v1.default_value) = "[{\"name\": \"feat1\", \"enabled\": true}]"];
+
+  // Map
+  map<string, int32> string_to_int = 14 [(defaults.v1.default_value) = "{\"key1\": 10, \"key2\": 20}"];
+  map<string, FeatureFlag> string_to_msg = 15 [(defaults.v1.default_value) = "{\"x\": {\"enabled\": false}}"];
+
+  // Oneof
+  oneof choice {
+    string choice_str = 16 [(defaults.v1.default_value) = "chosen"];
+    int32 choice_int = 17;
+  }
+
+  // Well-known types
+  google.protobuf.Duration duration = 18 [(defaults.v1.default_value) = "15s"];
+  google.protobuf.Timestamp timestamp = 19 [(defaults.v1.default_value) = "2026-01-01T00:00:00Z"];
+  google.protobuf.Struct struct_field = 20 [(defaults.v1.default_value) = "{\"key\": \"val\"}"];
+  google.protobuf.ListValue list_field = 21 [(defaults.v1.default_value) = "[1, \"two\"]"];
+  google.protobuf.Value value_field = 22 [(defaults.v1.default_value) = "\"any value\""];
+  google.protobuf.FieldMask mask_field = 23 [(defaults.v1.default_value) = "a.b,c.d"];
+  google.protobuf.BoolValue bool_wrapper = 24 [(defaults.v1.default_value) = "true"];
+}
+
+message OneofConflict {
+  oneof conflict {
+    string a = 1 [(defaults.v1.default_value) = "a"];
+    string b = 2 [(defaults.v1.default_value) = "b"];
+  }
+}
+
+message RecursiveA {
+  RecursiveB b = 1;
+}
+
+message RecursiveB {
+  RecursiveA a = 1;
+}
