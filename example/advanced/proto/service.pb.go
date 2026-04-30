@@ -23,7 +23,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// LogLevel определяет уровень логирования.
+// LogLevel defines the logging level.
 type LogLevel int32
 
 const (
@@ -79,7 +79,7 @@ func (LogLevel) EnumDescriptor() ([]byte, []int) {
 	return file_service_proto_rawDescGZIP(), []int{0}
 }
 
-// DatabaseConfig содержит настройки подключения к базе данных.
+// DatabaseConfig contains database connection settings.
 type DatabaseConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
@@ -156,7 +156,7 @@ func (x *DatabaseConfig) GetMaxIdleConns() int32 {
 	return 0
 }
 
-// CacheConfig содержит настройки кэширования.
+// CacheConfig contains caching settings.
 type CacheConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
@@ -217,31 +217,31 @@ func (x *CacheConfig) GetMaxSizeMb() int32 {
 	return 0
 }
 
-// ServiceConfig демонстрирует продвинутое использование default_value:
-// - Вложенные сообщения
+// ServiceConfig demonstrates advanced usage of default_value:
+// - Nested messages
 // - Enum
-// - Repeated поля
-// - Map поля
+// - Repeated fields
+// - Map fields
 // - Well-known types (Duration)
 type ServiceConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Имя сервиса.
+	// Service name.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Уровень логирования. По умолчанию INFO.
+	// Logging level. Default is INFO.
 	LogLevel LogLevel `protobuf:"varint,2,opt,name=log_level,json=logLevel,proto3,enum=example.advanced.v1.LogLevel" json:"log_level,omitempty"`
-	// Настройки базы данных (вложенное сообщение).
+	// Database settings (nested message).
 	Database *DatabaseConfig `protobuf:"bytes,3,opt,name=database,proto3" json:"database,omitempty"`
-	// Настройки кэша (вложенное сообщение).
+	// Cache settings (nested message).
 	Cache *CacheConfig `protobuf:"bytes,4,opt,name=cache,proto3" json:"cache,omitempty"`
-	// Разрешённые origins для CORS.
+	// Allowed origins for CORS.
 	AllowedOrigins []string `protobuf:"bytes,5,rep,name=allowed_origins,json=allowedOrigins,proto3" json:"allowed_origins,omitempty"`
-	// Интервалы повторных попыток в секундах.
+	// Retry intervals in seconds.
 	RetryIntervals []int32 `protobuf:"varint,6,rep,packed,name=retry_intervals,json=retryIntervals,proto3" json:"retry_intervals,omitempty"`
-	// Лимиты по ресурсам.
+	// Resource rate limits.
 	RateLimits map[string]int32 `protobuf:"bytes,7,rep,name=rate_limits,json=rateLimits,proto3" json:"rate_limits,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	// Таймаут запроса.
+	// Request timeout.
 	RequestTimeout *durationpb.Duration `protobuf:"bytes,8,opt,name=request_timeout,json=requestTimeout,proto3" json:"request_timeout,omitempty"`
-	// Таймаут graceful shutdown.
+	// Graceful shutdown timeout.
 	ShutdownTimeout *durationpb.Duration `protobuf:"bytes,9,opt,name=shutdown_timeout,json=shutdownTimeout,proto3" json:"shutdown_timeout,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache

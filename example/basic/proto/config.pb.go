@@ -22,18 +22,18 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Config демонстрирует базовое использование default_value для скалярных типов.
+// Config demonstrates basic usage of default_value for scalar types.
 type Config struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Хост сервера. По умолчанию localhost.
+	// Server host. Default is localhost.
 	Host string `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
-	// Порт сервера. По умолчанию 8080.
+	// Server port. Default is 8080.
 	Port int32 `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
-	// Включить режим отладки. По умолчанию false.
+	// Enable debug mode. Default is false.
 	Debug bool `protobuf:"varint,3,opt,name=debug,proto3" json:"debug,omitempty"`
-	// Таймаут в секундах. По умолчанию 30.
+	// Timeout in seconds. Default is 30.
 	TimeoutSeconds int32 `protobuf:"varint,4,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
-	// Максимальное количество соединений. По умолчанию 100.
+	// Maximum number of connections. Default is 100.
 	MaxConnections int32 `protobuf:"varint,5,opt,name=max_connections,json=maxConnections,proto3" json:"max_connections,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

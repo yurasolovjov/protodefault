@@ -11,8 +11,8 @@ import (
 	defaultsv1 "github.com/yurasolovjov/protodefault/proto/defaults/v1"
 )
 
-// Apply рекурсивно проставляет default values из (defaults.v1.default_value)
-// во всех полях m и его вложенных message, у которых поле не задано.
+// Apply recursively sets default values from (defaults.v1.default_value)
+// for all fields in m and its nested messages where the field is not set.
 func Apply(m proto.Message) error {
 	if m == nil {
 		return fmt.Errorf("message is nil")
@@ -21,21 +21,14 @@ func Apply(m proto.Message) error {
 	return applyMessage(m.ProtoReflect(), visited)
 }
 
-// MustApply — как Apply, но паникует при ошибке.
-func MustApply(m proto.Message) {
-	if err := Apply(m); err != nil {
-		panic(err)
-	}
-}
-
 func applyMessage(m protoreflect.Message, visited map[protoreflect.FullName]bool) error {
 	md := m.Descriptor()
 
-	// Обработка Well-Known Types (WKT)
+	// Handle Well-Known Types (WKT)
 	if isWKT(md.FullName()) {
-		// WKT обрабатываются как специальные типы, но если они сами являются полями другого сообщения,
-		// их обработка происходит в applyField. Здесь мы можем оказаться если Apply вызван напрямую для WKT.
-		// Большинство WKT не имеют полей с дефолтами внутри себя в смысле нашей логики.
+		// WKT are handled as special types, but if they are fields of another message,
+		// their handling occurs in applyField. We may end up here if Apply is called directly on a WKT.
+		// Most WKT don't have fields with defaults inside them in terms of our logic.
 		return nil
 	}
 
@@ -51,13 +44,13 @@ func applyMessage(m protoreflect.Message, visited map[protoreflect.FullName]bool
 }
 
 func applyField(m protoreflect.Message, fd protoreflect.FieldDescriptor, visited map[protoreflect.FullName]bool) error {
-	// 1. Проверяем наличие дефолта в опциях
+	// 1. Check for default value in options
 	defaultValueStr := ""
 	if proto.HasExtension(fd.Options(), defaultsv1.E_DefaultValue) {
 		defaultValueStr = proto.GetExtension(fd.Options(), defaultsv1.E_DefaultValue).(string)
 	}
 
-	// 2. Обработка oneof
+	// 2. Handle oneof
 	if od := fd.ContainingOneof(); od != nil {
 		// handleOneOf only handles selection and recursion.
 		// It doesn't need to be called for every field in oneof, just once per oneof.
@@ -70,7 +63,7 @@ func applyField(m protoreflect.Message, fd protoreflect.FieldDescriptor, visited
 		return nil
 	}
 
-	// 3. Если это сообщение (не repeated и не map), идем вглубь или инициализируем
+	// 3. If this is a message (not repeated and not map), go deeper or initialize
 	if fd.Kind() == protoreflect.MessageKind && !fd.IsList() && !fd.IsMap() {
 		if isWKT(fd.Message().FullName()) {
 			// Fallthrough to step 4, handling WKT as scalars with setWKTDefault
@@ -79,18 +72,18 @@ func applyField(m protoreflect.Message, fd protoreflect.FieldDescriptor, visited
 		}
 	}
 
-	// 4. Если значения нет в опции, и это не сообщение (где нужна рекурсия), ничего не делаем
+	// 4. If no value in option and this is not a message (where recursion is needed), do nothing
 	if defaultValueStr == "" {
 		return nil
 	}
 
-	// 5. Проверяем, задано ли поле
+	// 5. Check if field is set
 	if isSet(m, fd) {
-		// Если поле задано и это repeated message или map message, нужно пройти по элементам
+		// If field is set and it's a repeated message or map message, iterate over elements
 		return handleRecursionOnSetField(m, fd, visited)
 	}
 
-	// 6. Применяем дефолт
+	// 6. Apply default
 	return setFieldDefault(m, fd, defaultValueStr)
 }
 

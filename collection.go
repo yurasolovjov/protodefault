@@ -22,7 +22,7 @@ func setRepeatedField(m protoreflect.Message, fd protoreflect.FieldDescriptor, v
 
 	// Better way: use a placeholder message that matches the structure.
 	// Or just use a simple JSON parser for the array?
-	// The spec says: "JSON-массив в строке. Парсится через protojson для совместимости со всеми типами."
+	// The spec says: "JSON array in a string. Parsed via protojson for compatibility with all types."
 	// To use protojson, we need a message.
 
 	msg := m.New().Interface()
