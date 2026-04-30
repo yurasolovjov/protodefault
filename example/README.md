@@ -6,14 +6,19 @@ This directory contains examples demonstrating how to use the `protodefault` lib
 
 ```
 example/
-├── basic/           # Basic example with scalar types
+├── basic/              # Basic example with scalar types
 │   ├── main.go
 │   └── proto/
 │       └── config.proto
-└── advanced/        # Advanced example with composite types
+├── advanced/           # Advanced example with composite types
+│   ├── main.go
+│   └── proto/
+│       └── service.proto
+└── with-validation/    # Integration with protovalidate
     ├── main.go
-    └── proto/
-        └── service.proto
+    ├── proto/
+    │   └── user.proto
+    └── README.md
 ```
 
 ## Running Examples
@@ -45,6 +50,22 @@ go run ./example/advanced/...
 - Repeated fields — default in JSON array format
 - Map fields — default in JSON object format
 - Well-known types — `google.protobuf.Duration`
+
+### With Validation Example
+
+Demonstrates integration with [protovalidate](https://github.com/bufbuild/protovalidate):
+
+```bash
+go run ./example/with-validation/...
+```
+
+**What it shows:**
+- Combining `default_value` with validation rules
+- Recommended processing order: parse → apply defaults → validate
+- Required fields (no default) vs optional fields (with default)
+- Validation error messages for constraint violations
+
+See [with-validation/README.md](with-validation/README.md) for detailed documentation.
 
 ## Generating Proto Files
 

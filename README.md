@@ -264,3 +264,369 @@ Apply(msg)
 ```bash
 protoc -I proto --go_out=. --go_opt=module=github.com/yurasolovjov/protodefault proto/defaults/v1/options.proto
 ```
+
+## Как устроен Buf
+
+[Buf](https://buf.build/) — это современный инструментарий для работы с Protocol Buffers, созданный как замена традиционному `protoc`. Buf решает множество проблем, с которыми сталкиваются разработчики при использовании protobuf: сложность настройки `protoc`, управление зависимостями, линтинг и форматирование схем.
+
+### Архитектура Buf
+
+Buf состоит из нескольких компонентов:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Buf CLI                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │  buf build  │  │ buf generate│  │  buf lint   │              │
+│  │             │  │             │  │             │              │
+│  │ Компиляция  │  │ Генерация   │  │ Проверка    │              │
+│  │ .proto в    │  │ кода через  │  │ стиля и     │              │
+│  │ FileDescr.  │  │ плагины     │  │ best pract. │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+│                                                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │ buf breaking│  │  buf format │  │  buf dep    │              │
+│  │             │  │             │  │             │              │
+│  │ Проверка    │  │ Авто-       │  │ Управление  │              │
+│  │ обратной    │  │ форматиро-  │  │ зависимос-  │              │
+│  │ совмест.    │  │ вание       │  │ тями        │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                    Buf Schema Registry (BSR)                     │
+│                                                                  │
+│  Централизованный реестр proto-схем, аналог npm/Maven для proto │
+│  URL: https://buf.build/                                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Ключевые файлы конфигурации
+
+#### `buf.yaml` — конфигурация модуля
+
+Определяет proto-модуль и его зависимости:
+
+```yaml
+version: v2
+modules:
+  - path: proto                    # Директория с .proto файлами
+deps:
+  - buf.build/bufbuild/protovalidate  # Зависимость из BSR
+lint:
+  use:
+    - STANDARD                     # Набор правил линтинга
+breaking:
+  use:
+    - FILE                         # Правила проверки совместимости
+```
+
+#### `buf.gen.yaml` — конфигурация генерации кода
+
+Определяет, какие плагины использовать и куда класть результат:
+
+```yaml
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/myorg/myproject/gen
+plugins:
+  - remote: buf.build/protocolbuffers/go  # Плагин для Go
+    out: gen
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go             # gRPC плагин
+    out: gen
+    opt:
+      - paths=source_relative
+```
+
+#### `buf.lock` — lock-файл зависимостей
+
+Автоматически генерируется командой `buf dep update`. Фиксирует точные версии (коммиты) всех зависимостей:
+
+```yaml
+version: v2
+deps:
+  - name: buf.build/bufbuild/protovalidate
+    commit: a6c49f84cc0f4e5b69b6b7b3c0f3d8e1
+    digest: shake256:abc123...
+```
+
+### Как Buf разрешает зависимости
+
+Когда вы пишете в `.proto` файле:
+
+```proto
+import "buf/validate/validate.proto";
+```
+
+Buf выполняет следующие шаги:
+
+1. **Читает `buf.yaml`** и находит зависимость `buf.build/bufbuild/protovalidate`.
+
+2. **Проверяет `buf.lock`** на наличие закэшированной версии.
+
+3. **Скачивает модуль из BSR** (если не закэширован) в локальный кэш:
+   - macOS/Linux: `~/.cache/buf/`
+   - Windows: `%LOCALAPPDATA%\buf\`
+
+4. **Разрешает импорт** `buf/validate/validate.proto` относительно скачанного модуля.
+
+### Сравнение Buf и protoc
+
+| Аспект | protoc | Buf |
+|--------|--------|-----|
+| Управление зависимостями | Ручное (копировать файлы или `-I` пути) | Автоматическое через BSR |
+| Конфигурация | Длинные командные строки | Декларативные YAML-файлы |
+| Линтинг | Нет встроенного | `buf lint` с настраиваемыми правилами |
+| Проверка совместимости | Нет | `buf breaking` |
+| Форматирование | Нет | `buf format` |
+| Удалённые плагины | Нужно устанавливать локально | Запуск в облаке через BSR |
+| Кэширование | Нет | Встроенное |
+
+### Пример рабочего процесса с Buf
+
+```bash
+# 1. Инициализация модуля
+buf config init
+
+# 2. Добавление зависимости (редактируем buf.yaml)
+# deps:
+#   - buf.build/bufbuild/protovalidate
+
+# 3. Обновление lock-файла
+buf dep update
+
+# 4. Проверка синтаксиса и стиля
+buf lint
+
+# 5. Генерация кода
+buf generate
+
+# 6. Проверка обратной совместимости (в CI)
+buf breaking --against '.git#branch=main'
+```
+
+## Где находится `buf/validate/validate.proto`
+
+Файл `buf/validate/validate.proto` — это основной файл библиотеки [protovalidate](https://github.com/bufbuild/protovalidate), которая предоставляет декларативные правила валидации для protobuf-сообщений.
+
+### Расположение в Buf Schema Registry (BSR)
+
+Официальный модуль размещён в BSR по адресу:
+
+```
+buf.build/bufbuild/protovalidate
+```
+
+**Веб-интерфейс для просмотра:** https://buf.build/bufbuild/protovalidate/docs
+
+### Структура модуля protovalidate
+
+```
+buf.build/bufbuild/protovalidate/
+├── buf/
+│   └── validate/
+│       ├── validate.proto      # Основные правила валидации
+│       ├── expression.proto    # CEL-выражения для кастомных правил
+│       └── priv/
+│           └── private.proto   # Внутренние типы (не для публичного использования)
+└── buf.yaml                    # Конфигурация модуля
+```
+
+### Как подключить protovalidate
+
+#### Способ 1: Через Buf (рекомендуется)
+
+1. Добавьте зависимость в `buf.yaml`:
+
+```yaml
+version: v2
+deps:
+  - buf.build/bufbuild/protovalidate
+```
+
+2. Обновите lock-файл:
+
+```bash
+buf dep update
+```
+
+3. Используйте в `.proto`:
+
+```proto
+syntax = "proto3";
+
+import "buf/validate/validate.proto";
+
+message User {
+  string email = 1 [(buf.validate.field).string.email = true];
+  int32 age = 2 [(buf.validate.field).int32 = { gte: 0, lte: 150 }];
+}
+```
+
+#### Способ 2: Через protoc (ручное управление)
+
+Если вы используете `protoc` напрямую, нужно скачать proto-файлы вручную:
+
+```bash
+# Клонируем репозиторий
+git clone https://github.com/bufbuild/protovalidate.git
+
+# Структура proto-файлов
+ls protovalidate/proto/protovalidate/
+# buf/validate/validate.proto
+# buf/validate/expression.proto
+# buf/validate/priv/private.proto
+
+# Компиляция с указанием пути
+protoc \
+  -I protovalidate/proto/protovalidate \
+  -I your_proto_dir \
+  --go_out=. \
+  your_proto_dir/your_file.proto
+```
+
+### Содержимое `validate.proto`
+
+Файл `buf/validate/validate.proto` определяет:
+
+1. **Расширение `FieldOptions`** для добавления правил валидации к полям:
+
+```proto
+extend google.protobuf.FieldOptions {
+  optional FieldConstraints field = 1159;
+}
+```
+
+2. **Сообщение `FieldConstraints`** с правилами для разных типов:
+
+```proto
+message FieldConstraints {
+  // Общие ограничения
+  repeated Constraint cel = 23;           // CEL-выражения
+  bool required = 25;                      // Обязательное поле
+  bool ignore = 27;                        // Игнорировать при валидации
+
+  // Типо-специфичные ограничения (oneof)
+  oneof type {
+    FloatRules float = 1;
+    DoubleRules double = 2;
+    Int32Rules int32 = 3;
+    Int64Rules int64 = 4;
+    // ... и так далее для всех типов
+    StringRules string = 14;
+    BytesRules bytes = 15;
+    EnumRules enum = 16;
+    RepeatedRules repeated = 18;
+    MapRules map = 19;
+  }
+}
+```
+
+3. **Правила для каждого типа**, например `StringRules`:
+
+```proto
+message StringRules {
+  optional string const = 1;        // Точное значение
+  optional uint64 len = 19;         // Точная длина
+  optional uint64 min_len = 2;      // Минимальная длина
+  optional uint64 max_len = 3;      // Максимальная длина
+  optional string pattern = 6;      // Регулярное выражение
+  optional string prefix = 7;       // Префикс
+  optional string suffix = 8;       // Суффикс
+  optional string contains = 9;     // Содержит подстроку
+  repeated string in = 10;          // Одно из значений
+  repeated string not_in = 11;      // Не одно из значений
+
+  // Well-known форматы
+  oneof well_known {
+    bool email = 12;
+    bool hostname = 13;
+    bool ip = 14;
+    bool uri = 17;
+    bool uuid = 22;
+    // ... и другие
+  }
+}
+```
+
+### Интеграция protodefault и protovalidate
+
+Эти две библиотеки отлично дополняют друг друга:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Порядок обработки                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Парсинг         YAML/JSON → proto.Message                   │
+│     ─────────────────────────────────────────────────────────   │
+│                              │                                   │
+│                              ▼                                   │
+│  2. protodefault    Заполнение пустых полей дефолтами           │
+│     ─────────────────────────────────────────────────────────   │
+│                              │                                   │
+│                              ▼                                   │
+│  3. protovalidate   Проверка всех ограничений                   │
+│     ─────────────────────────────────────────────────────────   │
+│                              │                                   │
+│                              ▼                                   │
+│  4. Использование   Конфиг готов к работе                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Пример комбинированного использования:
+
+```proto
+message ServerConfig {
+  // Обязательное поле без дефолта — валидация упадёт, если не задано
+  string host = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Опциональное поле с дефолтом — всегда пройдёт валидацию
+  int32 port = 2 [
+    (defaults.v1.default_value) = "8080",
+    (buf.validate.field).int32 = { gte: 1, lte: 65535 }
+  ];
+
+  // Опциональное поле с дефолтом и форматом
+  string log_level = 3 [
+    (defaults.v1.default_value) = "info",
+    (buf.validate.field).string = { in: ["debug", "info", "warn", "error"] }
+  ];
+}
+```
+
+```go
+package main
+
+import (
+    "github.com/yurasolovjov/protodefault"
+    "buf.build/go/protovalidate"
+)
+
+func main() {
+    cfg := &ServerConfig{Host: "localhost"}
+
+    // 1. Применяем дефолты
+    if err := protodefault.Apply(cfg); err != nil {
+        panic(err)
+    }
+    // cfg.Port == 8080, cfg.LogLevel == "info"
+
+    // 2. Валидируем
+    validator, _ := protovalidate.New()
+    if err := validator.Validate(cfg); err != nil {
+        panic(err)
+    }
+
+    // Конфиг готов к использованию
+}
+```
+
+Смотрите полный пример в [example/with-validation/](example/with-validation/).

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package defaults.v1;
+
+import "google/protobuf/descriptor.proto";
+
+// Use the main package's go_package to avoid duplicate registration
+option go_package = "github.com/yurasolovjov/protodefault/proto/defaults/v1;defaultsv1";
+
+extend google.protobuf.FieldOptions {
+  string default_value = 50001;
+}
