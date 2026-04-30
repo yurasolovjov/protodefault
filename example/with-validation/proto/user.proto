@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package example.validation.v1;
+
+import "buf/validate/validate.proto";
+import "defaults/v1/options.proto";
+
+option go_package = "github.com/yurasolovjov/protodefault/example/with-validation/gen/example/validation/v1;validationv1";
+
+// User represents a user account with validation rules and default values.
+// This example demonstrates how protodefault and protovalidate work together:
+// 1. First, protodefault applies default values to unset fields
+// 2. Then, protovalidate checks that all constraints are satisfied
+message User {
+  // Username must be between 3 and 50 characters.
+  // No default - this field is required.
+  string username = 1 [(buf.validate.field).string = {
+    min_len: 3,
+    max_len: 50
+  }];
+
+  // Email must be a valid email format.
+  // No default - this field is required.
+  string email = 2 [(buf.validate.field).string.email = true];
+
+  // User's display name. Defaults to "Anonymous" if not provided.
+  // Must be between 1 and 100 characters.
+  string display_name = 3 [
+    (defaults.v1.default_value) = "Anonymous",
+    (buf.validate.field).string = {
+      min_len: 1,
+      max_len: 100
+    }
+  ];
+
+  // User's age. Defaults to 18.
+  // Must be between 13 and 150.
+  int32 age = 4 [
+    (defaults.v1.default_value) = "18",
+    (buf.validate.field).int32 = {
+      gte: 13,
+      lte: 150
+    }
+  ];
+
+  // User's role. Defaults to ROLE_USER.
+  Role role = 5 [
+    (defaults.v1.default_value) = "ROLE_USER",
+    (buf.validate.field).enum = {
+      defined_only: true
+    }
+  ];
+
+  // Account settings with nested defaults and validation.
+  Settings settings = 6;
+
+  // Tags for the user. Defaults to ["new-user"].
+  // Each tag must be between 1 and 30 characters.
+  repeated string tags = 7 [
+    (defaults.v1.default_value) = '["new-user"]',
+    (buf.validate.field).repeated = {
+      min_items: 0,
+      max_items: 10,
+      items: {
+        string: {
+          min_len: 1,
+          max_len: 30
+        }
+      }
+    }
+  ];
+}
+
+// Role defines user permission levels.
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_USER = 1;
+  ROLE_MODERATOR = 2;
+  ROLE_ADMIN = 3;
+}
+
+// Settings contains user preferences.
+message Settings {
+  // Whether to receive email notifications. Defaults to true.
+  bool email_notifications = 1 [(defaults.v1.default_value) = "true"];
+
+  // Preferred language code. Defaults to "en".
+  // Must be a 2-letter ISO 639-1 code.
+  string language = 2 [
+    (defaults.v1.default_value) = "en",
+    (buf.validate.field).string = {
+      len: 2,
+      pattern: "^[a-z]{2}$"
+    }
+  ];
+
+  // Maximum items per page. Defaults to 25.
+  // Must be between 10 and 100.
+  int32 items_per_page = 3 [
+    (defaults.v1.default_value) = "25",
+    (buf.validate.field).int32 = {
+      gte: 10,
+      lte: 100
+    }
+  ];
+
+  // Theme preference. Defaults to "light".
+  // Must be either "light" or "dark".
+  string theme = 4 [
+    (defaults.v1.default_value) = "light",
+    (buf.validate.field).string = {
+      in: ["light", "dark"]
+    }
+  ];
+}

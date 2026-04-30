@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package example.advanced.v1;
+
+import "defaults/v1/options.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/yurasolovjov/protodefault/example/advanced/proto;advancedpb";
+
+// LogLevel определяет уровень логирования.
+enum LogLevel {
+  LOG_LEVEL_UNSPECIFIED = 0;
+  LOG_LEVEL_DEBUG = 1;
+  LOG_LEVEL_INFO = 2;
+  LOG_LEVEL_WARN = 3;
+  LOG_LEVEL_ERROR = 4;
+}
+
+// DatabaseConfig содержит настройки подключения к базе данных.
+message DatabaseConfig {
+  string host = 1 [(defaults.v1.default_value) = "localhost"];
+  int32 port = 2 [(defaults.v1.default_value) = "5432"];
+  string database = 3 [(defaults.v1.default_value) = "app_db"];
+  int32 max_open_conns = 4 [(defaults.v1.default_value) = "25"];
+  int32 max_idle_conns = 5 [(defaults.v1.default_value) = "5"];
+}
+
+// CacheConfig содержит настройки кэширования.
+message CacheConfig {
+  bool enabled = 1 [(defaults.v1.default_value) = "true"];
+  google.protobuf.Duration ttl = 2 [(defaults.v1.default_value) = "300s"];
+  int32 max_size_mb = 3 [(defaults.v1.default_value) = "256"];
+}
+
+// ServiceConfig демонстрирует продвинутое использование default_value:
+// - Вложенные сообщения
+// - Enum
+// - Repeated поля
+// - Map поля
+// - Well-known types (Duration)
+message ServiceConfig {
+  // Имя сервиса.
+  string name = 1 [(defaults.v1.default_value) = "my-service"];
+  
+  // Уровень логирования. По умолчанию INFO.
+  LogLevel log_level = 2 [(defaults.v1.default_value) = "LOG_LEVEL_INFO"];
+  
+  // Настройки базы данных (вложенное сообщение).
+  DatabaseConfig database = 3;
+  
+  // Настройки кэша (вложенное сообщение).
+  CacheConfig cache = 4;
+  
+  // Разрешённые origins для CORS.
+  repeated string allowed_origins = 5 [
+    (defaults.v1.default_value) = '["http://localhost:3000", "http://localhost:8080"]'
+  ];
+  
+  // Интервалы повторных попыток в секундах.
+  repeated int32 retry_intervals = 6 [
+    (defaults.v1.default_value) = '[1, 2, 5, 10, 30]'
+  ];
+  
+  // Лимиты по ресурсам.
+  map<string, int32> rate_limits = 7 [
+    (defaults.v1.default_value) = '{"requests_per_second": 100, "burst": 200}'
+  ];
+  
+  // Таймаут запроса.
+  google.protobuf.Duration request_timeout = 8 [(defaults.v1.default_value) = "30s"];
+  
+  // Таймаут graceful shutdown.
+  google.protobuf.Duration shutdown_timeout = 9 [(defaults.v1.default_value) = "15s"];
+}
